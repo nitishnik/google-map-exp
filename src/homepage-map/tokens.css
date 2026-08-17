@@ -1,0 +1,20 @@
+:root {
+  --hm-bg: #ffffff;
+  --hm-ink: #101620;
+  --hm-ink2: #59636f;
+  --hm-ink3: #6b7280;
+  --hm-hair: #e9e7e2;
+  --hm-hair2: #dbd8d1;
+  --hm-wash: #f6f4f0;
+  --hm-navy: #0d2233;
+  --hm-red: #e0261f;
+  --hm-red-dk: #be1c16;
+  --hm-sea: #e8eff3;
+  --hm-land: #ede8de;
+  --hm-land-warm: #e6d7c2;
+  --hm-land-selected: #d4c4aa;
+  --hm-coast: #d3ccbf;
+  --hm-dot: #c9c2b4;
+  --hm-sans: 'Schibsted Grotesk', Manrope, system-ui, sans-serif;
+  --hm-disp: 'Newsreader', 'DM Serif Text', Georgia, serif;
+}

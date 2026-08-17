@@ -1,0 +1,36 @@
+@import 'tailwindcss';
+
+:root {
+  --roso-bg: #fcfbf8;
+  --roso-ink: #0f1729;
+  --roso-border: #cbd5e1;
+  --roso-accent: #fa2c34;
+  --roso-stone: #343330;
+
+  font-family: Manrope, system-ui, sans-serif;
+  line-height: 1.5;
+  font-weight: 400;
+  color: var(--roso-ink);
+  background-color: var(--roso-bg);
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+html,
+body,
+#root {
+  margin: 0;
+  width: 100%;
+  min-height: 100%;
+}
+
+body {
+  overflow-x: hidden;
+  overflow-y: auto;
+}
+
+* {
+  box-sizing: border-box;
+}
