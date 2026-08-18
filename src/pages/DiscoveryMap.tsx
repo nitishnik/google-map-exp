@@ -75,7 +75,7 @@ export function DiscoveryMap() {
 
         <p className="font-[var(--hm-sans)] text-xs text-[var(--hm-ink3)]">
           Photo slots stay empty until product photography lands.{' '}
-          <Link to="/google" className="underline decoration-[var(--hm-hair2)] underline-offset-2">
+          <Link to="/" className="underline decoration-[var(--hm-hair2)] underline-offset-2">
             Google Maps version
           </Link>
         </p>

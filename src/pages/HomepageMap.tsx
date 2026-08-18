@@ -83,7 +83,7 @@ export function HomepageMap() {
           <p className="font-[var(--hm-sans)] text-xs text-[var(--hm-ink3)]">
             Toggle Flat map / 3D map to compare Google Maps surfaces. Photo slots
             stay empty until product photography lands.{' '}
-            <Link to="/" className="underline decoration-[var(--hm-hair2)] underline-offset-2">
+            <Link to="/discovery" className="underline decoration-[var(--hm-hair2)] underline-offset-2">
               Spec map
             </Link>
           </p>
