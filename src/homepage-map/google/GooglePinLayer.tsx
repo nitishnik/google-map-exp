@@ -1,6 +1,6 @@
 import { useMap, useMapsLibrary } from '@vis.gl/react-google-maps'
 import { createPortal } from 'react-dom'
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { PillMarker } from '../components/PillMarker'
 import type { MapPin } from '../components/pinModels'
 import {
@@ -22,6 +22,13 @@ export function GooglePinLayer({
   const [container, setContainer] = useState<HTMLDivElement | null>(null)
   const [placed, setPlaced] = useState<PlacedPin[]>([])
   const placedRef = useRef<PlacedPin[]>([])
+  const inputRef = useRef({ pins, level })
+  const overlayRef = useRef<google.maps.OverlayView | null>(null)
+
+  useLayoutEffect(() => {
+    inputRef.current = { pins, level }
+    overlayRef.current?.draw()
+  }, [level, pins])
 
   useEffect(() => {
     if (!map || !maps) return
@@ -48,19 +55,20 @@ export function GooglePinLayer({
           const height = mapElement.clientHeight
           root.style.width = `${width}px`
           root.style.height = `${height}px`
+          const current = inputRef.current
 
           const next = layoutPins({
-            pins,
+            pins: current.pins,
             width,
             height,
             padding:
-              level === 'world'
+              current.level === 'world'
                 ? { top: 12, right: 58, bottom: 24, left: 100 }
                 : { top: 12, right: 58, bottom: 24, left: 12 },
             mode:
-              level === 'world'
+              current.level === 'world'
                 ? 'world'
-                : level === 'country'
+                : current.level === 'country'
                   ? 'country'
                   : 'city',
             project: (lat, lng) => {
@@ -85,6 +93,7 @@ export function GooglePinLayer({
     }
 
     const overlay = new RecommendationOverlay()
+    overlayRef.current = overlay
     overlay.setMap(activeMap)
     const clickListener = activeMap.addListener(
       'click',
@@ -101,8 +110,9 @@ export function GooglePinLayer({
     return () => {
       clickListener.remove()
       overlay.setMap(null)
+      if (overlayRef.current === overlay) overlayRef.current = null
     }
-  }, [level, map, maps, pins])
+  }, [map, maps])
 
   if (!container) return null
 
