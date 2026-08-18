@@ -8,7 +8,7 @@
 
 This document is the API the frontend should call for destinations, cities, attractions, and products. Google Maps is a separate client-side SDK and is **not** part of this API.
 
-Related: [HOMEPAGE_MAP_API.md](./HOMEPAGE_MAP_API.md) (architecture). This file is the endpoint-level contract.
+Related: [HOMEPAGE_MAP_API.md](./HOMEPAGE_MAP_API.md) (architecture), [HOMEPAGE_MAP_DATA_LOADING.md](./HOMEPAGE_MAP_DATA_LOADING.md) (load the homepage slice once — v1 default). This file is the endpoint-level contract.
 
 ---
 
@@ -38,16 +38,17 @@ Related: [HOMEPAGE_MAP_API.md](./HOMEPAGE_MAP_API.md) (architecture). This file 
 
 ## 1. Overview
 
-The homepage map has four zoom levels. Each level is one read endpoint (plus a bootstrap call on first load).
+The homepage map has four zoom levels. Granular reads exist for each level. **v1 default is not one request per level.** The frontend calls `GET /bootstrap` once, caches the homepage slice (including `fits` for every audience), then navigates and re-ranks in memory. See [HOMEPAGE_MAP_DATA_LOADING.md](./HOMEPAGE_MAP_DATA_LOADING.md).
 
-| Map level | User sees | Endpoint |
+| Map level | User sees | Endpoint (optional after bootstrap) |
 | --- | --- | --- |
+| first paint | Preference bar + full tree in memory | `GET /bootstrap` (**required** for v1) |
 | `world` | Ranked countries as pins + list | `GET /destinations` |
 | `country` | Ranked cities in that country | `GET /countries/{countryId}/cities` |
 | `city` | Ranked attractions in that city | `GET /cities/{cityId}/attractions` |
 | `poi` | Products for one attraction | `GET /cities/{cityId}/attractions/{attractionId}` |
 
-The backend **ranks and copies** (tier, why, chips, trade-off). The frontend **places pins and flies the camera** using `lat` / `lng` from the JSON.
+The backend **owns the catalog**. For v1 bootstrap, send **`fits` for all audiences** so the client can re-rank on a preference tap without a second GET. Granular endpoints may still return a list already ranked for `?audience=` (other clients, debug, or a later live-price call). The frontend **places pins and flies the camera** using `lat` / `lng` from the JSON.
 
 All endpoints are **GET**, idempotent, and safe to cache.
 
@@ -80,7 +81,7 @@ Browser                         Your API                         Store
 | Path ids | lowercase kebab-case or ISO country codes (`pl`, `krakow`, `wawel-castle`) |
 | Numbers | JSON numbers, not strings. Prices are integers in **EUR**. |
 | Coordinates | WGS84 decimal degrees. `lat` ∈ [-90, 90], `lng` ∈ [-180, 180]. |
-| Lists | Already sorted. Do not re-sort on the client. |
+| Lists | Granular endpoints: already sorted for `?audience=`. After `GET /bootstrap`, the client **does** re-rank from cached `fits` when the preference chip changes. |
 | Missing fit | If a destination/attraction has no `fits` entry for the requested audience, treat **tier as `3`** and generate fallback copy (see [Ranking](#5-ranking-rules)). |
 | Currency | EUR. Prefix in UI is `€`. Do not send a currency symbol in JSON. |
 | Locale | English copy in v1. No `Accept-Language` behaviour yet. |
@@ -389,7 +390,7 @@ GET /api/v1/homepage-map/destinations?audience=family
 | --- | --- | --- | --- | --- |
 | `audience` | enum | no | `family` | Preference used for ranking and copy |
 
-**When:** first load; user changes audience while on world; user zooms out to world; audience change resets to world.
+**When:** optional after bootstrap. Other clients, debug, or if bootstrap is unavailable. The v1 homepage does **not** call this on audience change — it re-ranks from cached `fits`.
 
 #### `200 OK`
 
@@ -531,7 +532,7 @@ Ranked cities (max 8). Drives country pins and the city list.
 GET /api/v1/homepage-map/countries/{countryId}/cities?audience=family
 ```
 
-**When:** user clicks a country pin or row (`goCountry`).
+**When:** optional after bootstrap. Other clients or debug. The v1 homepage does **not** call this on `goCountry`.
 
 #### `200 OK`
 
@@ -648,7 +649,7 @@ Ranked attractions (max 4). Drives city pins and the attractions list.
 GET /api/v1/homepage-map/cities/{cityId}/attractions?audience=family
 ```
 
-**When:** user clicks a city pin or row (`goCity`).
+**When:** optional after bootstrap. Other clients or debug. The v1 homepage does **not** call this on `goCity`.
 
 #### `200 OK`
 
@@ -761,7 +762,7 @@ Products for one attraction (max 3 after dedupe).
 GET /api/v1/homepage-map/cities/{cityId}/attractions/{attractionId}?audience=family
 ```
 
-**When:** user clicks an attraction pin or row (`goPoi`).
+**When:** optional after bootstrap. Other clients, debug, or a later live-price fetch at L3 (Approach G). The v1 homepage does **not** call this on `goPoi`.
 
 #### `200 OK`
 
@@ -852,13 +853,17 @@ Pins on the map should still show the city’s ranked attractions, with `selecte
 
 ### 8.8 Bootstrap (first paint)
 
-One round-trip for the preference bar + world view.
+**v1 default.** One round-trip for the preference bar **and the full homepage-map slice** (countries, cities, attractions, products, `fits` for every audience). After this, drill-in and preference taps **must not** call the granular endpoints.
+
+Decision record: [HOMEPAGE_MAP_DATA_LOADING.md](./HOMEPAGE_MAP_DATA_LOADING.md) (Approach A).
 
 ```http
 GET /api/v1/homepage-map/bootstrap?audience=family
 ```
 
-**When:** `HomepageMap` mounts. After this, use the granular endpoints for drill-in.
+**When:** `HomepageMap` mounts. `?audience=` only ranks the **first-paint** matchline / pin order. The payload still includes `fits` for the other audiences so a chip tap stays local.
+
+If bootstrap is not implemented, the fallback is a static homepage-slice JSON (same shape), not a waterfall of §8.2–§8.7.
 
 #### `200 OK`
 
@@ -880,13 +885,19 @@ GET /api/v1/homepage-map/bootstrap?audience=family
     "center": { "lat": 30, "lng": 40 },
     "zoom": 2.4
   },
-  "destinations": []
+  "destinations": [],
+  "cities": {},
+  "fitsComplete": true
 }
 ```
 
-`audiences` is identical to §8.1. `destinations` / `matchline` / `camera` are identical to §8.2.
+- `audiences` is identical to §8.1.
+- `destinations` / `matchline` / `camera` are identical to §8.2 for the requested audience.
+- `cities` is a map of `cityId` → city catalog (same shape as §8.5 / §8.6), including attractions and products. Every destination’s cities must be present (caps: ≤8 cities, ≤4 attractions, ≤3 products).
+- Each destination and attraction includes **`fits` for all five audiences**, not only `?audience=`.
+- `fitsComplete: true` means the client may re-rank without another GET.
 
-If bootstrap is not implemented, the client must call §8.1 and §8.2 in parallel.
+Granular endpoints (§8.2–§8.7) remain for other clients, debug, or a later live-price fetch at L3. They are **not** the homepage navigation path.
 
 ---
 
@@ -894,21 +905,27 @@ If bootstrap is not implemented, the client must call §8.1 and §8.2 in paralle
 
 Assume `VITE_API_BASE_URL=http://localhost:8080`.
 
+**v1 default (Approach A):** one bootstrap, then memory. Do not refetch on drill-in, preference, pan, breadcrumb, or zoom. See [HOMEPAGE_MAP_DATA_LOADING.md](./HOMEPAGE_MAP_DATA_LOADING.md).
+
 | User action | Hook | Request |
 | --- | --- | --- |
-| Open homepage | mount | `GET /bootstrap?audience=family` |
-| Switch audience on world | `setAud` | `GET /destinations?audience={id}` (audiences counts can stay cached) |
-| Switch audience on country | `setAud` | If new country `tier > 2` → treat as world. Else `GET /countries/{id}/cities?audience=` |
-| Switch audience on city | `setAud` | Same reset rule, else `GET /cities/{id}/attractions?audience=` |
-| Switch audience on POI | `setAud` | Same reset rule, else refetch POI with new `audience` |
-| Click country | `goCountry` | `GET /countries/{countryId}/cities?audience=` |
-| Click city | `goCity` | `GET /cities/{cityId}/attractions?audience=` |
-| Click attraction | `goPoi` | `GET /cities/{cityId}/attractions/{attractionId}?audience=` |
-| Breadcrumb World | `backWorld` | Reuse cached destinations or refetch |
-| Breadcrumb country | `backCountry` | Reuse cached cities or refetch |
-| Breadcrumb city | `backCity` | Reuse cached attractions or refetch |
-| Zoom in | `zoomIn` | Same as clicking the rank-0 item at the current level |
-| Zoom out | `zoomOut` | Same as the matching breadcrumb |
+| Open homepage | mount | `GET /bootstrap?audience=family` **once** |
+| Switch audience | `setAud` | **None.** Re-rank from cached `fits`. If current country `tier > 2`, return to world (still no fetch). |
+| Click country | `goCountry` | **None.** Cities from bootstrap cache, then fly camera. |
+| Click city | `goCity` | **None.** Attractions from cache, then fly camera. |
+| Click attraction | `goPoi` | **None.** Products from cache. |
+| Breadcrumb / zoom out | `backWorld` / `backCountry` / `backCity` / `zoomOut` | **None.** Reuse cache. |
+| Zoom in | `zoomIn` | **None.** Same as clicking the rank-0 item at the current level. |
+| Pan | drag | **None.** Pan never changes level. |
+
+Granular GETs from the table below are **optional** (debug, other clients, or a later live L3 price call). They are not the homepage funnel.
+
+| Optional / later | Hook | Request |
+| --- | --- | --- |
+| Debug or other client, world only | — | `GET /destinations?audience={id}` |
+| Debug or other client, one country | — | `GET /countries/{countryId}/cities?audience=` |
+| Debug or other client, one city | — | `GET /cities/{cityId}/attractions?audience=` |
+| Live commercial data at L3 (Approach G, not v1) | `goPoi` | `GET /cities/{cityId}/attractions/{attractionId}?audience=` |
 
 ### Example client
 
@@ -927,8 +944,10 @@ async function apiGet<T>(path: string): Promise<T> {
 }
 
 export const homepageMapApi = {
+  // v1 homepage: call bootstrap once, then navigate from memory.
   bootstrap: (audience: string) =>
     apiGet(`/bootstrap?audience=${encodeURIComponent(audience)}`),
+  // Optional: other clients, debug, or later live L3 prices.
   destinations: (audience: string) =>
     apiGet(`/destinations?audience=${encodeURIComponent(audience)}`),
   cities: (countryId: string, audience: string) =>
@@ -946,7 +965,7 @@ export const homepageMapApi = {
 }
 ```
 
-Loading: keep the last pins on screen until the new payload arrives, then swap. On error, keep last good state and show a toast (do not blank the map).
+Loading: bootstrap may run behind the first-paint poster. After the slice is in memory, keep pins on screen and fly the camera immediately — the flash states **what changed**, never “loading”. On error, keep last good state and degrade to the list (do not blank the map).
 
 ---
 
@@ -984,40 +1003,47 @@ Catalog is public and changes slowly. `max-age=60` is enough for v1. Vary on the
 
 ## 11. Worked request flow
 
-Family user opens the map, opens Poland, opens Kraków, opens Wawel Castle.
+Family user opens the map, opens Poland, opens Kraków, opens Wawel Castle. **One HTTP call.**
 
 ```
 1. GET /bootstrap?audience=family
-   → preference bar + 6 country pins, Poland tier 0
+   → preference bar + 6 country pins + cities / attractions / products in memory
+   → Poland tier 0 for family; fits for the other four audiences included
 
-2. GET /countries/pl/cities?audience=family
-   → Kraków selected, Warsaw / Gdańsk / Wrocław / Zakopane
+2. Tap Poland
+   → cities from memory (Kraków, Warsaw, Gdańsk, Wrocław, Zakopane)
    → camera zoom 6.2
+   → flash: “Poland · 5 cities prioritised”
+   → no GET
 
-3. GET /cities/krakow/attractions?audience=family
-   → up to 4 attractions, Wawel Castle rank 0
+3. Tap Kraków
+   → attractions from memory, Wawel Castle rank 0
    → camera zoom 12
+   → no GET
 
-4. GET /cities/krakow/attractions/wawel-castle?audience=family
-   → 2 products, CTA from €32 / €58
+4. Tap Wawel Castle
+   → 2 products from memory, CTA from €32 / €58
    → camera stays at city
+   → no GET
 ```
 
 User then taps **Budget-smart**:
 
 ```
-5. GET /destinations?audience=budget
-   (or cities/attractions if still drilled in and Poland budget tier is 0)
-   → Poland still tier 0, stays in-country if you refetch cities
+5. Re-rank from cached fits
+   → Poland still tier 0, stay in-country
    → matchline and chips change
+   → flash: “Re-ranked for budget-smart”
+   → no GET
 ```
 
 User then taps **Active** while still on Poland:
 
 ```
-6. Destinations payload (or country object) has Poland tier 3 for active
+6. Cached fits have Poland tier 3 for active
    → frontend resets to world (tier > 2)
-   → GET /destinations?audience=active
+   → re-rank destinations from memory
+   → no GET
 ```
 
 ---
@@ -1026,7 +1052,7 @@ User then taps **Active** while still on Poland:
 
 | Method | Path | Level |
 | --- | --- | --- |
-| `GET` | `/api/v1/homepage-map/bootstrap` | world + audiences |
+| `GET` | `/api/v1/homepage-map/bootstrap` | **v1 default:** full homepage slice + audiences |
 | `GET` | `/api/v1/homepage-map/audiences` | preference bar |
 | `GET` | `/api/v1/homepage-map/destinations` | world |
 | `GET` | `/api/v1/homepage-map/countries/{countryId}` | country meta |

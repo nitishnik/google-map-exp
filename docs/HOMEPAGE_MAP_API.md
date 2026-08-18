@@ -4,6 +4,8 @@ This app is a **Vite + React frontend**. There is no backend in this repo yet. T
 
 This note explains what happens today, then how a backend API would replace the local catalog.
 
+**v1 data loading:** one bootstrap of the homepage slice, then navigate in memory. Do not fetch on every zoom or preference tap. Decision record: [HOMEPAGE_MAP_DATA_LOADING.md](./HOMEPAGE_MAP_DATA_LOADING.md). Endpoint shapes: [API.md](./API.md).
+
 ---
 
 ## Two different APIs
@@ -129,23 +131,26 @@ Today this is all in `src/homepage-map/data/catalog.ts`.
 
 ## How frontend and backend should talk
 
-Keep Google Maps on the client. Move **catalog + ranking** to your API.
+Keep Google Maps on the client. Move **catalog** to your API. **v1: load it once.**
 
 ```
-User picks audience / clicks a pin
+Homepage mounts
         │
         ▼
-Frontend  GET /api/...  (JSON)
+Frontend  GET /bootstrap  (full homepage slice + fits for every audience)
         │
         ▼
-Backend ranks destinations / cities / attractions
+In-memory catalog (same role as catalog.ts today)
         │
-        ▼
-Frontend updates camera + pins + RankedPanel
+        ├── preference tap  → re-rank locally → flash “Re-ranked for …”
+        ├── pin / list tap  → swap pins from memory → fly camera
+        └── pan             → never fetches, never changes level
         │
         ▼
 Google Maps SDK pans / zooms (no extra HTTP from you)
 ```
+
+Do **not** call the API again on `goCountry` / `goCity` / `goPoi` / `setAud`. That pattern is documented as Approach C in [HOMEPAGE_MAP_DATA_LOADING.md](./HOMEPAGE_MAP_DATA_LOADING.md) and is **not** the v1 default.
 
 ### Suggested env
 
@@ -160,9 +165,17 @@ VITE_API_BASE_URL=http://localhost:8080
 
 ### Suggested endpoints
 
-Match the four map levels already in `useHomepageMap`.
+**v1 default** — full homepage slice (call once on mount)
 
-**World** — ranked countries for an audience
+```http
+GET /api/homepage-map/bootstrap?audience=family
+```
+
+Returns audiences, destinations, every city’s attractions and products, and `fits` for all five audiences. After this, `useHomepageMap` navigates from memory.
+
+Granular URLs below stay for other clients, debug, or a later live-price fetch at L3. They are not the homepage funnel.
+
+**World** — ranked countries for an audience (optional after bootstrap)
 
 ```http
 GET /api/homepage-map/destinations?audience=family
@@ -208,30 +221,30 @@ GET /api/homepage-map/cities/krakow/attractions?audience=family
 GET /api/homepage-map/cities/krakow/attractions/wieliczka-salt-mine
 ```
 
-Query `audience` on list endpoints so the backend can rank. The frontend should not re-implement `ranking.ts` once the API exists.
+Query `audience` on **granular** list endpoints so other clients can get a pre-ranked list. After bootstrap, the homepage **does** keep using `ranking.ts` (or equivalent) against cached `fits` — preference must re-rank with one tap and no GET.
 
-### Example frontend fetch
+### Example frontend fetch (v1)
 
 ```ts
 const API = import.meta.env.VITE_API_BASE_URL
 
-export async function fetchDestinations(audience: string) {
+export async function fetchBootstrap(audience: string) {
   const res = await fetch(
-    `${API}/api/homepage-map/destinations?audience=${encodeURIComponent(audience)}`,
+    `${API}/api/homepage-map/bootstrap?audience=${encodeURIComponent(audience)}`,
   )
-  if (!res.ok) throw new Error(`Destinations failed: ${res.status}`)
+  if (!res.ok) throw new Error(`Bootstrap failed: ${res.status}`)
   return res.json()
 }
 ```
 
 Wire that into `useHomepageMap` instead of importing `DESTINATIONS` / `CITIES`:
 
-1. On load (and when audience changes) → fetch destinations.
-2. On `goCountry(id)` → fetch cities for that country, then set camera.
-3. On `goCity(id)` → fetch attractions, then set camera.
-4. On `goPoi(name)` → fetch products (or use data already returned with the city).
+1. On load → `fetchBootstrap` **once**, cache destinations + cities.
+2. On `goCountry` / `goCity` / `goPoi` → read cache, then set camera. **No fetch.**
+3. On audience change → re-rank from cached `fits`. **No fetch.** If the open country is a poor fit (tier > 2), return to world — still no fetch.
+4. On pan / breadcrumb / zoom out → memory only.
 
-Show a loading / error state on the map and panel while requests are in flight.
+Bootstrap may run behind the first-paint poster. After the slice is in memory, the flash states what changed, never “loading”. On error, keep last good state and degrade to the list.
 
 ### CORS
 
@@ -254,9 +267,9 @@ In production, allow only your real site origin.
 | Camera fly / pan / zoom | Frontend (`useHomepageMap`, `CameraSync`, `CameraFly`) |
 | Pin UI (pill markers, tiers) | Frontend |
 | Audience toggle UI | Frontend |
-| Destination / city / attraction records | Backend |
-| Ranking by audience | Backend (today: `ranking.ts`) |
-| Product prices, ratings, copy | Backend |
+| Destination / city / attraction records | Backend (one bootstrap payload) |
+| Ranking by audience | Client from cached `fits` (today: `ranking.ts`). Server may pre-rank granular endpoints. |
+| Product prices, ratings, copy | Backend (in bootstrap; live L3 fetch later if needed) |
 | Secrets (DB, CMS, private Google keys) | Backend only — never `VITE_` |
 
 Do **not** put a server-only Google key in `VITE_*`. The Maps JavaScript key is the one exception: it must be in the browser, so restrict it in Cloud Console.
@@ -267,13 +280,14 @@ Do **not** put a server-only Google key in `VITE_*`. The Maps JavaScript key is 
 
 | User action | `level` | Frontend | Backend |
 | --- | --- | --- | --- |
-| Open homepage | `world` | Fetch destinations, fit world camera | `GET .../destinations?audience=` |
-| Click country pin / row | `country` | Fetch cities, fly to country bounds | `GET .../countries/:id/cities` |
-| Click city | `city` | Fetch attractions, fly to city | `GET .../cities/:id/attractions` |
-| Click attraction | `poi` | Fetch or reveal products | `GET .../attractions/:id` |
-| Change audience | same or reset to world | Refetch current level | same URLs, new `audience` |
+| Open homepage | `world` | Fetch bootstrap **once**, fit world camera | `GET .../bootstrap?audience=` |
+| Click country pin / row | `country` | Cities from cache, fly to country bounds | none |
+| Click city | `city` | Attractions from cache, fly to city | none |
+| Click attraction | `poi` | Products from cache | none (optional later: live price GET) |
+| Change audience | same or reset to world | Re-rank from cached `fits` | none |
+| Pan | unchanged | Camera only | none |
 
-If the new audience makes the current country a poor fit (tier > 2), the UI already resets to world — keep that rule after you move ranking to the API.
+If the new audience makes the current country a poor fit (tier > 2), the UI already resets to world — keep that rule; it still does not need a fetch.
 
 ---
 
@@ -284,7 +298,8 @@ Any stack is fine (Node, Java, Go, …) as long as it returns JSON that matches 
 Typical layout:
 
 ```
-GET  /api/homepage-map/destinations
+GET  /api/homepage-map/bootstrap          ← v1 homepage (full slice)
+GET  /api/homepage-map/destinations       ← optional / other clients
 GET  /api/homepage-map/countries/:countryId/cities
 GET  /api/homepage-map/cities/:cityId/attractions
 GET  /api/homepage-map/cities/:cityId/attractions/:attractionId
@@ -292,10 +307,10 @@ GET  /api/homepage-map/cities/:cityId/attractions/:attractionId
 
 Backend jobs:
 
-1. Load catalog from DB / CMS.
-2. Apply the same ranking as `src/homepage-map/ranking.ts`.
-3. Return already-ranked lists plus `tier`, `why`, `chips`.
-4. Include `lat` / `lng` so the frontend can place pins without geocoding.
+1. Load the **homepage-map slice** from DB / CMS (not the whole booking catalogue).
+2. Return it in one bootstrap payload, including `fits` for every audience.
+3. Include `lat` / `lng` so the frontend can place pins without geocoding.
+4. Granular endpoints may still apply `ranking.ts` for `?audience=` if other clients need a pre-ranked list.
 
 You do not need a Google Maps server SDK for this homepage. Geocoding is only needed if you store addresses instead of coordinates.
 
@@ -322,6 +337,7 @@ The UI runs at the Vite URL (usually `http://localhost:5173`). Google Maps loads
 | `src/homepage-map/google/GoogleRecommendationMap.tsx` | Flat / 3D map + markers |
 | `src/homepage-map/useHomepageMap.ts` | Navigation, camera, flash messages |
 | `src/homepage-map/data/catalog.ts` | Local stand-in for the backend |
-| `src/homepage-map/ranking.ts` | Local stand-in for backend ranking |
+| `src/homepage-map/ranking.ts` | Ranks cached `fits` (stays on the client after bootstrap) |
 | `src/homepage-map/types.ts` | Contract to copy into API responses |
 | `.env` / `.env.example` | Google Maps key (and later API base URL) |
+| `docs/HOMEPAGE_MAP_DATA_LOADING.md` | Why bootstrap-once is the v1 default |

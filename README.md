@@ -2,6 +2,15 @@
 
 Flat / 3D destination discovery map. Nothing else from the old POC is included.
 
+## Docs
+
+| File | What it is |
+| --- | --- |
+| [docs/client-requirements.md](docs/client-requirements.md) | Client brief |
+| [docs/HOMEPAGE_MAP_DATA_LOADING.md](docs/HOMEPAGE_MAP_DATA_LOADING.md) | Load the catalog once (v1 default) |
+| [docs/HOMEPAGE_MAP_API.md](docs/HOMEPAGE_MAP_API.md) | Frontend / backend architecture |
+| [docs/API.md](docs/API.md) | REST endpoint contract |
+
 ## Setup
 
 ```bash
