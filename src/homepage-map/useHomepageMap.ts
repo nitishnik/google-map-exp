@@ -4,10 +4,12 @@ import { geoBounds, padLiteral } from './geo/bounds'
 import { countryFeature } from './geo/worldData'
 import {
   audienceLabel,
+  cityTier,
   destinationById,
   rankedAttractions,
   rankedCities,
   rankedDestinations,
+  tierAttraction,
   tierOf,
 } from './ranking'
 import type { AudienceId, MapLevel } from './types'
@@ -61,9 +63,12 @@ function worldCamera(): CameraTarget {
   }
 }
 
-function countryCamera(countryId: string): CameraTarget {
+function countryCamera(
+  countryId: string,
+  aud: AudienceId,
+): CameraTarget {
   const dest = destinationById(countryId)!
-  const cities = rankedCities(countryId)
+  const cities = rankedCities(countryId, aud)
   const feature = countryFeature(countryId)
   const bounds = feature
     ? padLiteral(geoBounds(feature.geometry), 0.55)
@@ -111,18 +116,20 @@ export function useHomepageMap(): HomepageMapState {
 
   const clearFlash = useCallback(() => setFlash(null), [])
 
-  const goCountry = useCallback((id: string) => {
-    const dest = destinationById(id)
-    if (!dest) return
-    setLevel('country')
-    setCountryId(id)
-    setCityId(dest.cityId)
-    setPoiName(null)
-    setCamera(countryCamera(id))
-    setFlash(
-      `${dest.name} · ${rankedCities(id).length} cities prioritised`,
-    )
-  }, [])
+  const goCountry = useCallback(
+    (id: string) => {
+      const dest = destinationById(id)
+      if (!dest) return
+      const cities = rankedCities(id, aud)
+      setLevel('country')
+      setCountryId(id)
+      setCityId(cities[0]?.id ?? dest.cityId)
+      setPoiName(null)
+      setCamera(countryCamera(id, aud))
+      setFlash(`${dest.name} · ${cities.length} cities prioritised`)
+    },
+    [aud],
+  )
 
   const goCity = useCallback(
     (id: string) => {
@@ -181,7 +188,7 @@ export function useHomepageMap(): HomepageMapState {
       return
     }
     if (level === 'country' && countryId) {
-      const top = rankedCities(countryId)[0]
+      const top = rankedCities(countryId, aud)[0]
       if (top) goCity(top.id)
       return
     }
@@ -209,7 +216,17 @@ export function useHomepageMap(): HomepageMapState {
     (id: AudienceId) => {
       setAudState(id)
       setFlash(`Re-ranked for ${audienceLabel(id).toLowerCase()}`)
-      if (level !== 'world' && countryId && tierOf(destinationById(countryId)!, id) > 2) {
+      const city = cityId ? CITIES[cityId] : null
+      const attraction =
+        city && poiName
+          ? city.attractions.find((item) => item.name === poiName)
+          : null
+      const poorFit =
+        (attraction && tierAttraction(attraction, id) > 2) ||
+        (city && cityTier(city, id) > 2) ||
+        (countryId && tierOf(destinationById(countryId)!, id) > 2)
+
+      if (level !== 'world' && poorFit) {
         setLevel('world')
         setCountryId(null)
         setCityId(null)
@@ -217,7 +234,7 @@ export function useHomepageMap(): HomepageMapState {
         setCamera(worldCamera())
       }
     },
-    [countryId, level],
+    [cityId, countryId, level, poiName],
   )
 
   return useMemo(

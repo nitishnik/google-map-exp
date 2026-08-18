@@ -43,7 +43,7 @@ function ToggleButton({
       role="tab"
       aria-selected={active}
       onClick={onClick}
-      className={`h-9 rounded-full px-3 font-[var(--hm-sans)] text-[12px] font-semibold tracking-wide transition ${
+      className={`h-11 rounded-full px-3 font-[var(--hm-sans)] text-[12px] font-semibold tracking-wide transition ${
         active
           ? 'bg-[var(--hm-navy)] text-white'
           : 'text-[var(--hm-ink2)] hover:text-[var(--hm-ink)]'

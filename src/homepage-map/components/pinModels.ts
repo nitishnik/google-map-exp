@@ -54,13 +54,13 @@ export function pinsForLevel({
   }
 
   if (level === 'country' && countryId) {
-    return rankedCities(countryId).map((city, i) => ({
+    return rankedCities(countryId, aud).map((city, i) => ({
       key: city.id,
       lat: city.lat,
       lng: city.lng,
       label: city.name,
       count: city.picks,
-      tier: cityTier(city, countryId),
+      tier: cityTier(city, aud),
       selected: i === 0,
       rank: i,
       onClick: () => onCity(city.id),
@@ -75,7 +75,6 @@ export function pinsForLevel({
         lat: a.lat,
         lng: a.lng,
         label: a.name,
-        count: a.products.length,
         tier: tierAttraction(a, aud),
         selected,
         quiet: level === 'poi' && !selected,

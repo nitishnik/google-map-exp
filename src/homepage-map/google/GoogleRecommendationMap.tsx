@@ -7,24 +7,26 @@ import {
   Map3D,
   MapMode,
   Marker3D,
+  type MapCameraChangedEvent,
   RenderingType,
 } from '@vis.gl/react-google-maps'
-import { useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { MapChrome } from '../components/MapChrome'
 import { PillFace } from '../components/PillMarker'
 import { pinsForLevel } from '../components/pinModels'
-import { CITIES } from '../data/catalog'
 import type { AudienceId, MapLevel } from '../types'
 import type { CameraTarget } from '../useHomepageMap'
 import { CameraFly } from './CameraFly'
 import { CameraSync } from './CameraSync'
 import { CityRingsLayer } from './CityRingsLayer'
 import { CountryTintLayer } from './CountryTintLayer'
+import { GooglePinLayer } from './GooglePinLayer'
 import { camera3dForLevel } from './camera'
 import { MAP_SEA } from './mapColors'
 import type { MapSurface } from './MapModeToggle'
 import { pillMarkerImage } from './pillMarkerImage'
 import { ROSO_MAP_STYLES } from './rosoMapStyles'
+import { AttractionClusterLayer } from './AttractionClusterLayer'
 
 const MAP_ID = import.meta.env.VITE_GOOGLE_MAPS_MAP_ID || 'DEMO_MAP_ID'
 
@@ -54,6 +56,18 @@ export function GoogleRecommendationMap(props: GoogleRecommendationMapProps) {
       ) : (
         <FlatGoogleMap {...props} />
       )}
+      {props.surface === 'flat' &&
+      (props.level === 'city' || props.level === 'poi') ? (
+        <div
+          className="pointer-events-none absolute inset-x-0 top-0 bottom-6 z-10 opacity-35"
+          style={{
+            backgroundImage:
+              'radial-gradient(circle, var(--hm-hair2) 0.8px, transparent 0.9px)',
+            backgroundSize: '12px 12px',
+          }}
+          aria-hidden
+        />
+      ) : null}
       <MapChrome
         level={props.level}
         countryId={props.countryId}
@@ -78,6 +92,8 @@ function FlatGoogleMap({
   onCountry,
   onCity,
   onPoi,
+  onZoomIn,
+  onZoomOut,
 }: GoogleRecommendationMapProps) {
   const pins = pinsForLevel({
     aud,
@@ -90,55 +106,60 @@ function FlatGoogleMap({
     onPoi,
   })
 
-  const city = cityId ? CITIES[cityId] : null
   const cityView = level === 'city' || level === 'poi'
+  const zoomBaseline = useRef(camera.zoom)
+  const suppressZoomUntil = useRef(Date.now() + 900)
+
+  useEffect(() => {
+    zoomBaseline.current = camera.zoom
+    suppressZoomUntil.current = Date.now() + 900
+  }, [camera])
+
+  const handleZoomChanged = useCallback(
+    (event: MapCameraChangedEvent) => {
+      const zoom = event.detail.zoom
+      if (Date.now() < suppressZoomUntil.current) {
+        zoomBaseline.current = zoom
+        return
+      }
+
+      const delta = zoom - zoomBaseline.current
+      if (Math.abs(delta) < 0.8) return
+      zoomBaseline.current = zoom
+      suppressZoomUntil.current = Date.now() + 900
+      if (delta > 0) onZoomIn()
+      else onZoomOut()
+    },
+    [onZoomIn, onZoomOut],
+  )
 
   return (
     <GoogleMap
       className="h-full w-full"
-      mapId={MAP_ID}
       defaultCenter={camera.center}
       defaultZoom={camera.zoom}
       gestureHandling="greedy"
       disableDefaultUI
       clickableIcons={false}
-      renderingType={RenderingType.VECTOR}
+      renderingType={RenderingType.RASTER}
       reuseMaps
       colorScheme="LIGHT"
       backgroundColor={MAP_SEA}
       styles={ROSO_MAP_STYLES}
       scaleControl={cityView}
+      onZoomChanged={handleZoomChanged}
     >
       <CameraSync camera={camera} />
       <CountryTintLayer aud={aud} level={level} selectedId={countryId} />
-      {cityView ? <CityRingsLayer cityId={cityId} /> : null}
-      {cityView && city ? (
-        <AdvancedMarker position={{ lat: city.lat, lng: city.lng }} zIndex={2}>
-          <span className="flex flex-col items-center">
-            <span className="size-2 rounded-full bg-[var(--hm-navy)]" />
-            <span className="mt-1 font-[var(--hm-sans)] text-[10px] font-medium text-[var(--hm-ink2)]">
-              {city.name}
-            </span>
-          </span>
-        </AdvancedMarker>
+      {level === 'country' ? (
+        <AttractionClusterLayer
+          countryId={countryId}
+          aud={aud}
+          onCity={onCity}
+        />
       ) : null}
-      {pins.map((pin) => (
-        <AdvancedMarker
-          key={pin.key}
-          position={{ lat: pin.lat, lng: pin.lng }}
-          zIndex={pin.selected ? 40 : 20 + (3 - pin.rank)}
-          onClick={() => pin.onClick()}
-          title={pin.label}
-        >
-          <PillFace
-            label={pin.label}
-            count={pin.count}
-            tier={pin.tier}
-            selected={pin.selected}
-            quiet={pin.quiet}
-          />
-        </AdvancedMarker>
-      ))}
+      {cityView ? <CityRingsLayer cityId={cityId} /> : null}
+      <GooglePinLayer pins={pins} level={level} />
     </GoogleMap>
   )
 }

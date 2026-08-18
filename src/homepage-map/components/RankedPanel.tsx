@@ -2,6 +2,7 @@ import { CITIES } from '../data/catalog'
 import {
   audienceLabel,
   chipsCountry,
+  cityReasonChip,
   cityTier,
   destinationById,
   factChip,
@@ -13,6 +14,7 @@ import {
   tierOf,
   tradeCountry,
   whyAttraction,
+  whyCity,
   whyCountry,
 } from '../ranking'
 import type { AudienceId, MapLevel } from '../types'
@@ -125,7 +127,7 @@ export function RankedPanel({
 
   if (level === 'country' && countryId) {
     const dest = destinationById(countryId)
-    const cities = rankedCities(countryId)
+    const cities = rankedCities(countryId, aud)
     return (
       <div className="flex flex-col gap-3">
         <div className="flex items-baseline justify-between gap-3">
@@ -138,7 +140,7 @@ export function RankedPanel({
         </div>
         <div className="flex flex-col gap-2">
           {cities.map((city) => {
-            const t = cityTier(city, countryId)
+            const t = cityTier(city, aud)
             return (
               <a
                 key={city.id}
@@ -153,18 +155,9 @@ export function RankedPanel({
                 <div className="min-w-0 flex-1">
                   <div className="mb-1.5 flex flex-wrap items-center gap-1.5">
                     <TierBadge tier={t} />
-                    {dest
-                      ? chipsCountry(dest, aud)
-                          .slice(0, 1)
-                          .map((chip) => (
-                            <span
-                              key={chip}
-                              className="rounded-md bg-[var(--hm-wash)] px-2 py-0.5 font-[var(--hm-sans)] text-[10px] font-medium text-[var(--hm-ink2)]"
-                            >
-                              {chip}
-                            </span>
-                          ))
-                      : null}
+                    <span className="rounded-md bg-[var(--hm-wash)] px-2 py-0.5 font-[var(--hm-sans)] text-[10px] font-medium text-[var(--hm-ink2)]">
+                      {cityReasonChip(city, aud)}
+                    </span>
                   </div>
                   <h5 className="font-[var(--hm-sans)] text-sm font-semibold text-[var(--hm-ink)]">
                     {city.name}
@@ -176,7 +169,7 @@ export function RankedPanel({
                     ) : null}
                   </h5>
                   <p className="mt-1 font-[var(--hm-sans)] text-xs leading-relaxed text-[var(--hm-ink2)]">
-                    {dest ? whyCountry(dest, aud) : ''}
+                    {whyCity(city, aud)}
                   </p>
                   <p className="mt-2 font-[var(--hm-sans)] text-[11px] font-semibold tracking-wide text-[var(--hm-ink)] uppercase">
                     {city.picks} picks

@@ -88,7 +88,7 @@ export function PillMarker({
         onClick()
       }}
       style={{ left: x, top: y, zIndex: selected ? zIndex + 20 : zIndex }}
-      className="absolute flex -translate-x-1/2 -translate-y-1/2 items-center justify-center"
+      className="pointer-events-auto absolute flex min-h-11 min-w-11 -translate-x-1/2 -translate-y-1/2 items-center justify-center"
       aria-label={face.label}
     >
       <PillFace selected={selected} {...face} />

@@ -84,11 +84,26 @@ export function rankedAttractions(cityId: string, aud: AudienceId): Attraction[]
     .slice(0, 4)
 }
 
-export function rankedCities(countryId: string): CityCatalog[] {
+export function cityTier(
+  city: CityCatalog,
+  aud: AudienceId,
+): TierIndex {
+  if (city.attractions.length === 0) return 3
+  return Math.min(
+    ...city.attractions.map((attraction) => tierAttraction(attraction, aud)),
+  ) as TierIndex
+}
+
+export function rankedCities(
+  countryId: string,
+  aud: AudienceId = 'family',
+): CityCatalog[] {
   const dest = destinationById(countryId)
   return Object.values(CITIES)
     .filter((c) => c.countryId === countryId)
     .sort((a, b) => {
+      const tierDifference = cityTier(a, aud) - cityTier(b, aud)
+      if (tierDifference !== 0) return tierDifference
       if (dest && a.id === dest.cityId) return -1
       if (dest && b.id === dest.cityId) return 1
       return b.picks - a.picks
@@ -96,13 +111,26 @@ export function rankedCities(countryId: string): CityCatalog[] {
     .slice(0, 8)
 }
 
-export function cityTier(city: CityCatalog, countryId: string): TierIndex {
-  const ranked = rankedCities(countryId)
-  const index = ranked.findIndex((c) => c.id === city.id)
-  if (index <= 0) return 0
-  if (index === 1) return 1
-  if (index === 2) return 2
-  return 3
+export function leadAttraction(city: CityCatalog, aud: AudienceId) {
+  return city.attractions
+    .slice()
+    .sort(
+      (a, b) =>
+        tierAttraction(a, aud) - tierAttraction(b, aud) ||
+        b.reviews - a.reviews,
+    )[0]
+}
+
+export function whyCity(city: CityCatalog, aud: AudienceId) {
+  const attraction = leadAttraction(city, aud)
+  return attraction
+    ? whyAttraction(attraction, aud)
+    : `No prioritised attraction is available for ${audienceLabel(aud).toLowerCase()}.`
+}
+
+export function cityReasonChip(city: CityCatalog, aud: AudienceId) {
+  const attraction = leadAttraction(city, aud)
+  return attraction ? factChip(attraction) : 'Limited recommendation data'
 }
 
 export function rankedProducts(a: Attraction): Product[] {

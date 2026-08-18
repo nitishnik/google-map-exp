@@ -8,7 +8,9 @@
 
 This document is the API the frontend should call for destinations, cities, attractions, and products. Google Maps is a separate client-side SDK and is **not** part of this API.
 
-Related: [HOMEPAGE_MAP_API.md](./HOMEPAGE_MAP_API.md) (architecture), [HOMEPAGE_MAP_DATA_LOADING.md](./HOMEPAGE_MAP_DATA_LOADING.md) (load the homepage slice once — v1 default). This file is the endpoint-level contract.
+**Backend start here:** [BACKEND.md](./BACKEND.md) (one API, sample JSON). This file is the full endpoint contract.
+
+Related: [HOMEPAGE_MAP_API.md](./HOMEPAGE_MAP_API.md) (architecture), [HOMEPAGE_MAP_DATA_LOADING.md](./HOMEPAGE_MAP_DATA_LOADING.md) (load the homepage slice once — v1 default).
 
 ---
 
