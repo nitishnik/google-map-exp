@@ -29,13 +29,26 @@ interface RankedPanelProps {
   onPoi: (name: string) => void
 }
 
-function PhotoSlot({ label }: { label: string }) {
+function PhotoSlot() {
   return (
-    <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-xl bg-[var(--hm-wash)] text-[9px] font-medium tracking-wide text-[var(--hm-ink3)] uppercase">
-      {label.slice(0, 3)}
-    </div>
+    <div
+      className="h-16 w-16 shrink-0 rounded-xl border border-dashed border-[var(--hm-hair2)] bg-[var(--hm-wash)]"
+      aria-hidden
+    />
   )
 }
+
+function slug(name: string) {
+  return name
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-|-$/g, '')
+}
+
+const rowClass =
+  'flex min-h-11 w-full items-start gap-3 rounded-2xl border border-[var(--hm-hair)] bg-white p-3 text-left text-[var(--hm-ink)] no-underline transition hover:border-[var(--hm-hair2)]'
 
 export function RankedPanel({
   aud,
@@ -64,13 +77,16 @@ export function RankedPanel({
             const city = CITIES[c.cityId]
             const t = tierOf(c, aud)
             return (
-              <button
+              <a
                 key={c.id}
-                type="button"
-                onClick={() => onCountry(c.id)}
-                className="flex min-h-11 w-full items-start gap-3 rounded-2xl border border-[var(--hm-hair)] bg-white p-3 text-left transition hover:border-[var(--hm-hair2)]"
+                href={`/destinations/${c.id}`}
+                onClick={(e) => {
+                  e.preventDefault()
+                  onCountry(c.id)
+                }}
+                className={rowClass}
               >
-                <PhotoSlot label={c.name} />
+                <PhotoSlot />
                 <div className="min-w-0 flex-1">
                   <div className="mb-1.5 flex flex-wrap items-center gap-1.5">
                     <TierBadge tier={t} />
@@ -99,7 +115,7 @@ export function RankedPanel({
                   </p>
                 </div>
                 <span className="mt-1 text-[var(--hm-ink3)]">›</span>
-              </button>
+              </a>
             )
           })}
         </div>
@@ -124,13 +140,16 @@ export function RankedPanel({
           {cities.map((city) => {
             const t = cityTier(city, countryId)
             return (
-              <button
+              <a
                 key={city.id}
-                type="button"
-                onClick={() => onCity(city.id)}
-                className="flex min-h-11 w-full items-start gap-3 rounded-2xl border border-[var(--hm-hair)] bg-white p-3 text-left transition hover:border-[var(--hm-hair2)]"
+                href={`/destinations/${countryId}/${city.id}`}
+                onClick={(e) => {
+                  e.preventDefault()
+                  onCity(city.id)
+                }}
+                className={rowClass}
               >
-                <PhotoSlot label={city.name} />
+                <PhotoSlot />
                 <div className="min-w-0 flex-1">
                   <div className="mb-1.5 flex flex-wrap items-center gap-1.5">
                     <TierBadge tier={t} />
@@ -164,7 +183,7 @@ export function RankedPanel({
                   </p>
                 </div>
                 <span className="mt-1 text-[var(--hm-ink3)]">›</span>
-              </button>
+              </a>
             )
           })}
         </div>
@@ -199,13 +218,16 @@ export function RankedPanel({
           {list.map((a) => {
             const t = tierAttraction(a, aud)
             return (
-              <button
+              <a
                 key={a.name}
-                type="button"
-                onClick={() => onPoi(a.name)}
-                className="flex min-h-11 w-full items-start gap-3 rounded-2xl border border-[var(--hm-hair)] bg-white p-3 text-left transition hover:border-[var(--hm-hair2)]"
+                href={`/destinations/${city.countryId}/${cityId}/${slug(a.name)}`}
+                onClick={(e) => {
+                  e.preventDefault()
+                  onPoi(a.name)
+                }}
+                className={rowClass}
               >
-                <PhotoSlot label={a.name} />
+                <PhotoSlot />
                 <div className="min-w-0 flex-1">
                   <div className="mb-1.5 flex flex-wrap items-center gap-1.5">
                     <TierBadge tier={t} />
@@ -228,7 +250,7 @@ export function RankedPanel({
                   </p>
                 </div>
                 <span className="mt-1 text-[var(--hm-ink3)]">›</span>
-              </button>
+              </a>
             )
           })}
         </div>
@@ -265,7 +287,7 @@ export function RankedPanel({
             className="rounded-2xl border border-[var(--hm-hair)] bg-white p-3"
           >
             <div className="flex gap-3">
-              <PhotoSlot label={a.name} />
+              <PhotoSlot />
               <div className="min-w-0 flex-1">
                 <h5 className="font-[var(--hm-sans)] text-sm font-semibold text-[var(--hm-ink)]">
                   {p.title}

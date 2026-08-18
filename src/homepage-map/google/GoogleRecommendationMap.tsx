@@ -10,16 +10,21 @@ import {
   RenderingType,
 } from '@vis.gl/react-google-maps'
 import { useState } from 'react'
-import { PillFace } from '../components/PillMarker'
 import { MapChrome } from '../components/MapChrome'
+import { PillFace } from '../components/PillMarker'
 import { pinsForLevel } from '../components/pinModels'
+import { CITIES } from '../data/catalog'
 import type { AudienceId, MapLevel } from '../types'
 import type { CameraTarget } from '../useHomepageMap'
 import { CameraFly } from './CameraFly'
 import { CameraSync } from './CameraSync'
+import { CityRingsLayer } from './CityRingsLayer'
+import { CountryTintLayer } from './CountryTintLayer'
 import { camera3dForLevel } from './camera'
+import { MAP_SEA } from './mapColors'
 import type { MapSurface } from './MapModeToggle'
 import { pillMarkerImage } from './pillMarkerImage'
+import { ROSO_MAP_STYLES } from './rosoMapStyles'
 
 const MAP_ID = import.meta.env.VITE_GOOGLE_MAPS_MAP_ID || 'DEMO_MAP_ID'
 
@@ -59,11 +64,6 @@ export function GoogleRecommendationMap(props: GoogleRecommendationMapProps) {
         onZoomIn={props.onZoomIn}
         onZoomOut={props.onZoomOut}
       />
-      <p className="pointer-events-none absolute bottom-2 left-3 z-10 font-[var(--hm-sans)] text-[10px] font-medium tracking-[0.08em] text-white/90 uppercase drop-shadow">
-        {props.surface === 'globe3d'
-          ? 'Drag to orbit · scroll to zoom · Google photorealistic 3D'
-          : 'Drag to pan · Google Maps'}
-      </p>
     </div>
   )
 }
@@ -90,6 +90,9 @@ function FlatGoogleMap({
     onPoi,
   })
 
+  const city = cityId ? CITIES[cityId] : null
+  const cityView = level === 'city' || level === 'poi'
+
   return (
     <GoogleMap
       className="h-full w-full"
@@ -102,8 +105,23 @@ function FlatGoogleMap({
       renderingType={RenderingType.VECTOR}
       reuseMaps
       colorScheme="LIGHT"
+      backgroundColor={MAP_SEA}
+      styles={ROSO_MAP_STYLES}
+      scaleControl={cityView}
     >
       <CameraSync camera={camera} />
+      <CountryTintLayer aud={aud} level={level} selectedId={countryId} />
+      {cityView ? <CityRingsLayer cityId={cityId} /> : null}
+      {cityView && city ? (
+        <AdvancedMarker position={{ lat: city.lat, lng: city.lng }} zIndex={2}>
+          <span className="flex flex-col items-center">
+            <span className="size-2 rounded-full bg-[var(--hm-navy)]" />
+            <span className="mt-1 font-[var(--hm-sans)] text-[10px] font-medium text-[var(--hm-ink2)]">
+              {city.name}
+            </span>
+          </span>
+        </AdvancedMarker>
+      ) : null}
       {pins.map((pin) => (
         <AdvancedMarker
           key={pin.key}

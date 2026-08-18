@@ -1,5 +1,7 @@
 import { useCallback, useMemo, useState } from 'react'
 import { CITIES, DESTINATIONS } from './data/catalog'
+import { geoBounds, padLiteral } from './geo/bounds'
+import { countryFeature } from './geo/worldData'
 import {
   audienceLabel,
   destinationById,
@@ -62,16 +64,22 @@ function worldCamera(): CameraTarget {
 function countryCamera(countryId: string): CameraTarget {
   const dest = destinationById(countryId)!
   const cities = rankedCities(countryId)
-  const points = [
-    { lat: dest.lat, lng: dest.lng },
-    ...cities.map((c) => ({ lat: c.lat, lng: c.lng })),
-  ]
+  const feature = countryFeature(countryId)
+  const bounds = feature
+    ? padLiteral(geoBounds(feature.geometry), 0.55)
+    : padBounds(
+        [
+          { lat: dest.lat, lng: dest.lng },
+          ...cities.map((c) => ({ lat: c.lat, lng: c.lng })),
+        ],
+        0.8,
+      )
   return {
     center: cities[0]
       ? { lat: cities[0].lat, lng: cities[0].lng }
       : dest,
     zoom: 6.2,
-    bounds: padBounds(points, 0.8),
+    bounds,
   }
 }
 

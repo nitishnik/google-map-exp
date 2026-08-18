@@ -40,8 +40,7 @@ export function PillFace({
   showLabel = true,
   showCount = true,
 }: PillFaceProps) {
-  const countVisible =
-    showCount && typeof count === 'number' && count > 0 && tier < 3
+  const countVisible = showCount && typeof count === 'number' && count > 0
 
   return (
     <span
@@ -83,12 +82,13 @@ export function PillMarker({
   return (
     <button
       type="button"
+      onPointerDown={(e) => e.stopPropagation()}
       onClick={(e) => {
         e.stopPropagation()
         onClick()
       }}
       style={{ left: x, top: y, zIndex: selected ? zIndex + 20 : zIndex }}
-      className="absolute flex min-h-[44px] min-w-[44px] -translate-x-1/2 -translate-y-1/2 items-center justify-center"
+      className="absolute flex -translate-x-1/2 -translate-y-1/2 items-center justify-center"
       aria-label={face.label}
     >
       <PillFace selected={selected} {...face} />

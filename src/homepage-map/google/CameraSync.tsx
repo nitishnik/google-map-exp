@@ -30,7 +30,10 @@ export function CameraSync({
       west != null &&
       tilt === 0
     ) {
-      map.fitBounds({ north, south, east, west }, 48)
+      map.fitBounds(
+        { north, south, east, west },
+        { top: 64, right: 72, bottom: 36, left: 28 },
+      )
       return
     }
     map.panTo({ lat, lng })
