@@ -50,7 +50,7 @@ APIProvider (Google)        useHomepageMap + ranking.ts
 1. Vite injects `VITE_GOOGLE_MAPS_API_KEY` at build time.
 2. `GoogleMapsProvider` wraps the page in Google’s `APIProvider`.
 3. `useHomepageMap` reads `src/homepage-map/data/catalog.ts` in memory.
-4. `ranking.ts` sorts countries / cities / attractions by audience (`family`, `culture`, …).
+4. `ranking.ts` sorts countries / cities / attractions by audience (`family_traveler`, `interest_deep_dive_traveler`, …).
 5. The map and the list both use that ranked data. Clicks change `level`: `world` → `country` → `city` → `poi`.
 
 No `fetch()`. No REST. No auth.
@@ -110,13 +110,13 @@ Shapes live in `src/homepage-map/types.ts`.
 | `Attraction` | City / POI view | `name`, `lat`, `lng`, `from`, `fits`, `products` |
 | `Product` | POI panel | `title`, `price`, `duration`, `rating`, `why` |
 
-Audience ids: `first` | `family` | `culture` | `active` | `budget`.
+Audience ids: `first_time_visitor` | `family_traveler` | `couple_traveler` | `comfort_easy_pace_traveler` | `solo_social_traveler` | `interest_deep_dive_traveler` | `active_adventure_traveler`.
 
 `fits` is preference scoring. Example for a country:
 
 ```ts
 fits: {
-  family: [
+  family_traveler: [
     0,                                    // tier: 0 best match … 3 worth considering
     ['Strong family-compatible inventory'],
     'Why this destination fits.',
@@ -168,22 +168,22 @@ VITE_API_BASE_URL=http://localhost:8080
 **v1 default** — full homepage slice (call once on mount)
 
 ```http
-GET /api/homepage-map/bootstrap?audience=family
+GET /api/homepage-map/bootstrap?audience=family_traveler
 ```
 
-Returns audiences, destinations, every city’s attractions and products, and `fits` for all five audiences. After this, `useHomepageMap` navigates from memory.
+Returns audiences, destinations, every city’s attractions and products, and `fits` for all seven canonical audiences. After this, `useHomepageMap` navigates from memory.
 
 Granular URLs below stay for other clients, debug, or a later live-price fetch at L3. They are not the homepage funnel.
 
 **World** — ranked countries for an audience (optional after bootstrap)
 
 ```http
-GET /api/homepage-map/destinations?audience=family
+GET /api/homepage-map/destinations?audience=family_traveler
 ```
 
 ```json
 {
-  "audience": "family",
+  "audience": "family_traveler",
   "matchline": "2 best matches and 1 best alternative for family.",
   "destinations": [
     {
@@ -206,13 +206,13 @@ GET /api/homepage-map/destinations?audience=family
 **Country** — ranked cities
 
 ```http
-GET /api/homepage-map/countries/pl/cities?audience=family
+GET /api/homepage-map/countries/pl/cities?audience=family_traveler
 ```
 
 **City** — ranked attractions (frontend currently keeps top 4)
 
 ```http
-GET /api/homepage-map/cities/krakow/attractions?audience=family
+GET /api/homepage-map/cities/krakow/attractions?audience=family_traveler
 ```
 
 **POI** — products for one attraction

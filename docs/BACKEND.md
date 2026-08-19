@@ -10,7 +10,7 @@ Two ways to give data. Pick **one** for the homepage.
 | Map feel | Fast (data already in memory) | Slower (wait for network, then fly the camera) |
 | Use | **Homepage v1 — use this** | Other clients, debug, or later live prices |
 
-**Recommended:** single API (`/bootstrap`). Frontend sends `?audience=family`. Backend returns countries + cities + attractions + products in that one JSON. After that, zoom and preference chips do **not** call the backend.
+**Recommended:** single API (`/bootstrap`). Frontend sends `?audience=family_traveler`. Backend returns countries + cities + attractions + products in that one JSON. After that, zoom and preference chips do **not** call the backend.
 
 **If you branch:** frontend calls a different API at each step (world → country → city → products). Same field meanings as below. The homepage should **not** use this path for v1.
 
@@ -22,7 +22,7 @@ Query used on most calls:
 
 | Name | Example | Values | Purpose |
 | --- | --- | --- | --- |
-| `audience` | `family` | `first`, `family`, `culture`, `active`, `budget` | Rank and copy for first paint. Default: `family`. |
+| `audience` | `family_traveler` | `first_time_visitor`, `family_traveler`, `couple_traveler`, `comfort_easy_pace_traveler`, `solo_social_traveler`, `interest_deep_dive_traveler`, `active_adventure_traveler` | Rank and copy for first paint. Default: `family_traveler`. |
 
 Prices are numbers in EUR (no `€`). `lat` / `lng` are decimal degrees. Caps: cities ≤ 8, attractions ≤ 4, products ≤ 3.
 
@@ -48,21 +48,26 @@ Ids: `pl`, `krakow`, `wawel-castle`.
 ## 1. Bootstrap (required for homepage)
 
 ```
-GET /api/v1/homepage-map/bootstrap?audience=family
+GET /api/v1/homepage-map/bootstrap?audience=family_traveler
 ```
 
 **Send:** `audience`.
 
-**Return:** chips + all countries + cities + attractions + products. Include `fits` for **all five** audiences, not only the query.
+**Return:** chips + all countries + cities + attractions + products. Include `fits` for **all seven** audiences, not only the query. The compact example below shows two representative `fits`; production returns all seven.
 
 Production: 6 countries. Example is two countries and one city.
 
 ```json
 {
-  "audience": "family",
+  "audience": "family_traveler",
   "audiences": [
-    { "id": "family", "label": "Family", "matchCount": 2 },
-    { "id": "culture", "label": "Culture & history", "matchCount": 3 }
+    { "id": "first_time_visitor", "label": "First Visit, Made Memorable", "matchCount": 2 },
+    { "id": "family_traveler", "label": "Family Favourites", "matchCount": 2 },
+    { "id": "couple_traveler", "label": "Perfect for Two", "matchCount": 3 },
+    { "id": "comfort_easy_pace_traveler", "label": "Premium & Effortless", "matchCount": 5 },
+    { "id": "solo_social_traveler", "label": "Solo & Social", "matchCount": 4 },
+    { "id": "interest_deep_dive_traveler", "label": "Go Deeper", "matchCount": 4 },
+    { "id": "active_adventure_traveler", "label": "Active Discovery", "matchCount": 3 }
   ],
   "matchline": "1 best match and 1 best alternative for family.",
   "destinations": [
@@ -75,8 +80,8 @@ Production: 6 countries. Example is two countries and one city.
       "picks": 9,
       "opts": 180,
       "fits": {
-        "family": [0, ["Strong family-compatible inventory"], "Compact old towns you can walk in an hour.", "Fewer English-language departures than western Europe."],
-        "culture": [1, ["Twentieth-century depth"], "Guides can name the buildings that were rebuilt.", "Heavier subject matter for under-12s."]
+        "family_traveler": [0, ["Strong family-compatible inventory"], "Compact old towns you can walk in an hour.", "Fewer English-language departures than western Europe."],
+        "interest_deep_dive_traveler": [1, ["Twentieth-century depth"], "Guides can name the buildings that were rebuilt.", "Heavier subject matter for under-12s."]
       }
     },
     {
@@ -88,8 +93,8 @@ Production: 6 countries. Example is two countries and one city.
       "picks": 31,
       "opts": 812,
       "fits": {
-        "family": [2, ["Skip-the-line ticket classes"], "Ticket class is the difference between a great day and a queue.", "August heat pushes good formats before 10:00."],
-        "culture": [0, ["Archaeologist-led access"], "Restricted-area entry with a specialist.", "Crowds at the icons."]
+        "family_traveler": [2, ["Skip-the-line ticket classes"], "Ticket class is the difference between a great day and a queue.", "August heat pushes good formats before 10:00."],
+        "interest_deep_dive_traveler": [0, ["Archaeologist-led access"], "Restricted-area entry with a specialist.", "Crowds at the icons."]
       }
     }
   ],
@@ -111,8 +116,8 @@ Production: 6 countries. Example is two countries and one city.
           "rating": 4.8,
           "reviews": 3420,
           "fits": {
-            "family": [0, "Flat courtyards and a 90-minute format."],
-            "culture": [0, "Royal apartments with a guide who can date each rebuild."]
+            "family_traveler": [0, "Flat courtyards and a 90-minute format."],
+            "interest_deep_dive_traveler": [0, "Royal apartments with a guide who can date each rebuild."]
           },
           "products": [
             {
@@ -151,8 +156,13 @@ GET /api/v1/homepage-map/audiences
 ```json
 {
   "audiences": [
-    { "id": "family", "label": "Family", "matchCount": 2 },
-    { "id": "culture", "label": "Culture & history", "matchCount": 3 }
+    { "id": "first_time_visitor", "label": "First Visit, Made Memorable", "matchCount": 2 },
+    { "id": "family_traveler", "label": "Family Favourites", "matchCount": 2 },
+    { "id": "couple_traveler", "label": "Perfect for Two", "matchCount": 3 },
+    { "id": "comfort_easy_pace_traveler", "label": "Premium & Effortless", "matchCount": 5 },
+    { "id": "solo_social_traveler", "label": "Solo & Social", "matchCount": 4 },
+    { "id": "interest_deep_dive_traveler", "label": "Go Deeper", "matchCount": 4 },
+    { "id": "active_adventure_traveler", "label": "Active Discovery", "matchCount": 3 }
   ]
 }
 ```
@@ -164,7 +174,7 @@ GET /api/v1/homepage-map/audiences
 ## 3. Destinations (world)
 
 ```
-GET /api/v1/homepage-map/destinations?audience=family
+GET /api/v1/homepage-map/destinations?audience=family_traveler
 ```
 
 **Send:** `audience`.
@@ -173,7 +183,7 @@ GET /api/v1/homepage-map/destinations?audience=family
 
 ```json
 {
-  "audience": "family",
+  "audience": "family_traveler",
   "matchline": "1 best match and 1 best alternative for family.",
   "destinations": [
     {
@@ -200,7 +210,7 @@ GET /api/v1/homepage-map/destinations?audience=family
 ## 4. One country
 
 ```
-GET /api/v1/homepage-map/countries/pl?audience=family
+GET /api/v1/homepage-map/countries/pl?audience=family_traveler
 ```
 
 **Send:** `countryId` in the path (`pl`), plus `audience`.
@@ -232,7 +242,7 @@ GET /api/v1/homepage-map/countries/pl?audience=family
 ## 5. Cities in a country
 
 ```
-GET /api/v1/homepage-map/countries/pl/cities?audience=family
+GET /api/v1/homepage-map/countries/pl/cities?audience=family_traveler
 ```
 
 **Send:** `countryId` (`pl`), plus `audience`.
@@ -256,7 +266,7 @@ GET /api/v1/homepage-map/countries/pl/cities?audience=family
 ## 6. One city
 
 ```
-GET /api/v1/homepage-map/cities/krakow?audience=family
+GET /api/v1/homepage-map/cities/krakow?audience=family_traveler
 ```
 
 **Send:** `cityId` (`krakow`), plus `audience`.
@@ -283,7 +293,7 @@ GET /api/v1/homepage-map/cities/krakow?audience=family
 ## 7. Attractions in a city
 
 ```
-GET /api/v1/homepage-map/cities/krakow/attractions?audience=family
+GET /api/v1/homepage-map/cities/krakow/attractions?audience=family_traveler
 ```
 
 **Send:** `cityId` (`krakow`), plus `audience`.
@@ -327,7 +337,7 @@ GET /api/v1/homepage-map/cities/krakow/attractions?audience=family
 ## 8. Products for one attraction
 
 ```
-GET /api/v1/homepage-map/cities/krakow/attractions/wawel-castle?audience=family
+GET /api/v1/homepage-map/cities/krakow/attractions/wawel-castle?audience=family_traveler
 ```
 
 **Send:** `cityId` + `attractionId` in the path, plus `audience`.

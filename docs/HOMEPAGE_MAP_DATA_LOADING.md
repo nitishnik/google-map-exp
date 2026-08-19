@@ -52,7 +52,7 @@ The current endpoint walkthrough in [API.md](./API.md) §9 (one request per dril
 | Cities per country | ≤ 8 (readability may show fewer) | ~5 extra cities + 1 featured city per country |
 | Attractions per city | ≤ 4 winners | 4 per featured city; extras are thinner |
 | Products per attraction | 3 (4 if readable) | 2–3 |
-| Audiences | 5 chips | `first`, `family`, `culture`, `active`, `budget` |
+| Audiences | 7 chips | `first_time_visitor`, `family_traveler`, `couple_traveler`, `comfort_easy_pace_traveler`, `solo_social_traveler`, `interest_deep_dive_traveler`, `active_adventure_traveler` |
 
 Include **`fits` (tier, chips, why, trade-off) for every audience** in that first payload. Preference is not in the URL, so the client must be able to re-rank without another GET.
 
@@ -76,7 +76,7 @@ Each approach: how it works, when the user waits, fit to the brief, verdict.
 
 **How.** One `GET /bootstrap` (or a static JSON file) returns:
 
-- all destinations, with `fits` for all five audiences
+- all destinations, with `fits` for all seven canonical audiences
 - cities per country (lat/lng, picks)
 - attractions + products for those cities
 - audience badge counts
@@ -96,7 +96,7 @@ The client keeps this in memory and ranks locally — the same model as `catalog
 
 ### B — One-go, already ranked for one audience
 
-**How.** Same full tree as A, but the backend returns copy already ranked for `?audience=family`. Tapping Culture fetches the whole tree again.
+**How.** Same full tree as A, but the backend returns copy already ranked for `?audience=family_traveler`. Tapping Go Deeper fetches the whole tree again.
 
 | Moment | Wait |
 | --- | --- |
@@ -242,9 +242,9 @@ Worked flow after A (no extra GETs):
    → products from memory
    → flash: “Wawel Castle · 2 products from €32”
 
-5. Tap Budget-smart
+5. Tap Premium & Effortless
    → re-rank from `fits` in memory
-   → flash: “Re-ranked for budget-smart”
+   → flash: “Re-ranked for premium & effortless”
    → if Poland is a poor fit (tier > 2), return to world — still no fetch
 ```
 
@@ -254,7 +254,7 @@ Worked flow after A (no extra GETs):
 
 The current local catalog is the right order of magnitude for production v1:
 
-- 6 countries × 5 audience `fits`
+- 6 countries × 7 audience `fits`
 - on the order of 30 city records
 - up to 4 attractions × a few products
 

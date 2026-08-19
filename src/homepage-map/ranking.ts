@@ -96,7 +96,7 @@ export function cityTier(
 
 export function rankedCities(
   countryId: string,
-  aud: AudienceId = 'family',
+  aud: AudienceId = 'family_traveler',
 ): CityCatalog[] {
   const dest = destinationById(countryId)
   return Object.values(CITIES)

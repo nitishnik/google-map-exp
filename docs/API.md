@@ -57,7 +57,7 @@ All endpoints are **GET**, idempotent, and safe to cache.
 ```
 Browser                         Your API                         Store
   │                                │                               │
-  │  GET .../destinations?audience=family                          │
+  │  GET .../destinations?audience=family_traveler                 │
   │───────────────────────────────►│  load catalog                 │
   │                                │──────────────────────────────►│
   │                                │◄──────────────────────────────│
@@ -90,7 +90,7 @@ Browser                         Your API                         Store
 | Pagination | None. Hard caps: destinations = all, cities ≤ 8, attractions ≤ 4, products ≤ 3. |
 | Trailing slash | Do not use. `/destinations` not `/destinations/`. |
 | Unknown query keys | Ignore. Do not 400. |
-| Default audience | `family` if `audience` is omitted. |
+| Default audience | `family_traveler` if `audience` is omitted. |
 
 ### Success envelope
 
@@ -99,7 +99,7 @@ Every `200` body includes:
 ```json
 {
   "apiVersion": "v1",
-  "audience": "family"
+  "audience": "family_traveler"
 }
 ```
 
@@ -115,11 +115,13 @@ Travel preference. Matches `AudienceId` in `types.ts`.
 
 | Value | UI label | Meaning |
 | --- | --- | --- |
-| `first` | First visit | First-trip icons, skip-the-line, guided transit |
-| `family` | Family | Short formats, shade, indoor options, under-12s |
-| `culture` | Culture & history | Expert-led, restricted access, historian formats |
-| `active` | Active | Early starts, boats, walking, outdoor days |
-| `budget` | Budget-smart | Price per guided hour, included tastings, free grounds |
+| `first_time_visitor` | First Visit, Made Memorable | First-trip icons, skip-the-line, guided transit |
+| `family_traveler` | Family Favourites | Short formats, shade, indoor options, under-12s |
+| `couple_traveler` | Perfect for Two | Shared formats, food-led evenings, private upgrades |
+| `comfort_easy_pace_traveler` | Premium & Effortless | Smoother logistics, pickup, reserved access, relaxed pacing |
+| `solo_social_traveler` | Solo & Social | Join-in groups, central meeting points, social formats |
+| `interest_deep_dive_traveler` | Go Deeper | Expert-led, restricted access, historian formats |
+| `active_adventure_traveler` | Active Discovery | Early starts, boats, walking, outdoor days |
 
 Invalid value → `400` with `code: "INVALID_AUDIENCE"`.
 
@@ -320,7 +322,7 @@ Every non-2xx body:
   "apiVersion": "v1",
   "error": {
     "code": "INVALID_AUDIENCE",
-    "message": "audience must be one of: first, family, culture, active, budget",
+    "message": "audience must be one of: first_time_visitor, family_traveler, couple_traveler, comfort_easy_pace_traveler, solo_social_traveler, interest_deep_dive_traveler, active_adventure_traveler",
     "param": "audience"
   }
 }
@@ -360,11 +362,13 @@ GET /api/v1/homepage-map/audiences
 {
   "apiVersion": "v1",
   "audiences": [
-    { "id": "first", "label": "First visit", "matchCount": 2 },
-    { "id": "family", "label": "Family", "matchCount": 2 },
-    { "id": "culture", "label": "Culture & history", "matchCount": 3 },
-    { "id": "active", "label": "Active", "matchCount": 1 },
-    { "id": "budget", "label": "Budget-smart", "matchCount": 3 }
+    { "id": "first_time_visitor", "label": "First Visit, Made Memorable", "matchCount": 2 },
+    { "id": "family_traveler", "label": "Family Favourites", "matchCount": 2 },
+    { "id": "couple_traveler", "label": "Perfect for Two", "matchCount": 3 },
+    { "id": "comfort_easy_pace_traveler", "label": "Premium & Effortless", "matchCount": 5 },
+    { "id": "solo_social_traveler", "label": "Solo & Social", "matchCount": 4 },
+    { "id": "interest_deep_dive_traveler", "label": "Go Deeper", "matchCount": 4 },
+    { "id": "active_adventure_traveler", "label": "Active Discovery", "matchCount": 3 }
   ]
 }
 ```
@@ -376,7 +380,7 @@ GET /api/v1/homepage-map/audiences
 | `audiences[].label` | string | UI chip text |
 | `audiences[].matchCount` | integer | Destinations with explicit fit and tier ≤ 1 |
 
-`matchCount` example for `family`: Poland (tier 0) + Italy (tier 1) → `2`. Thailand family is tier 2, so it does **not** count.
+`matchCount` example for `family_traveler`: Poland (tier 0) + Italy (tier 1) → `2`. Thailand is tier 2, so it does **not** count.
 
 ---
 
@@ -385,12 +389,12 @@ GET /api/v1/homepage-map/audiences
 Ranked countries for one audience. Drives world pins, the destinations list, and the matchline.
 
 ```http
-GET /api/v1/homepage-map/destinations?audience=family
+GET /api/v1/homepage-map/destinations?audience=family_traveler
 ```
 
 | Query | Type | Required | Default | Description |
 | --- | --- | --- | --- | --- |
-| `audience` | enum | no | `family` | Preference used for ranking and copy |
+| `audience` | enum | no | `family_traveler` | Preference used for ranking and copy |
 
 **When:** optional after bootstrap. Other clients, debug, or if bootstrap is unavailable. The v1 homepage does **not** call this on audience change — it re-ranks from cached `fits`.
 
@@ -399,7 +403,7 @@ GET /api/v1/homepage-map/destinations?audience=family
 ```json
 {
   "apiVersion": "v1",
-  "audience": "family",
+  "audience": "family_traveler",
   "mapLevel": "world",
   "matchline": "1 best match and 1 best alternative for family. Everything else stays on the map, labelled honestly.",
   "count": 6,
@@ -481,7 +485,7 @@ Pin `count` on the map = `picks`.
 Country metadata plus suggested camera. Optional if `GET .../cities` already embeds `country`. Included so the client can refresh copy after an audience change without refetching cities.
 
 ```http
-GET /api/v1/homepage-map/countries/{countryId}?audience=family
+GET /api/v1/homepage-map/countries/{countryId}?audience=family_traveler
 ```
 
 | Path | Type | Example |
@@ -490,14 +494,14 @@ GET /api/v1/homepage-map/countries/{countryId}?audience=family
 
 | Query | Default |
 | --- | --- |
-| `audience` | `family` |
+| `audience` | `family_traveler` |
 
 #### `200 OK`
 
 ```json
 {
   "apiVersion": "v1",
-  "audience": "family",
+  "audience": "family_traveler",
   "mapLevel": "country",
   "country": {
     "id": "pl",
@@ -531,7 +535,7 @@ GET /api/v1/homepage-map/countries/{countryId}?audience=family
 Ranked cities (max 8). Drives country pins and the city list.
 
 ```http
-GET /api/v1/homepage-map/countries/{countryId}/cities?audience=family
+GET /api/v1/homepage-map/countries/{countryId}/cities?audience=family_traveler
 ```
 
 **When:** optional after bootstrap. Other clients or debug. The v1 homepage does **not** call this on `goCountry`.
@@ -541,7 +545,7 @@ GET /api/v1/homepage-map/countries/{countryId}/cities?audience=family
 ```json
 {
   "apiVersion": "v1",
-  "audience": "family",
+  "audience": "family_traveler",
   "mapLevel": "country",
   "count": 5,
   "flash": "Poland · 5 cities prioritised",
@@ -632,7 +636,7 @@ Camera: center on the default-base city; bounds pad country + all returned citie
 ### 8.5 Get city
 
 ```http
-GET /api/v1/homepage-map/cities/{cityId}?audience=family
+GET /api/v1/homepage-map/cities/{cityId}?audience=family_traveler
 ```
 
 Optional companion to the attractions list. Same `city` object as in §8.6.
@@ -648,7 +652,7 @@ Optional companion to the attractions list. Same `city` object as in §8.6.
 Ranked attractions (max 4). Drives city pins and the attractions list.
 
 ```http
-GET /api/v1/homepage-map/cities/{cityId}/attractions?audience=family
+GET /api/v1/homepage-map/cities/{cityId}/attractions?audience=family_traveler
 ```
 
 **When:** optional after bootstrap. Other clients or debug. The v1 homepage does **not** call this on `goCity`.
@@ -658,7 +662,7 @@ GET /api/v1/homepage-map/cities/{cityId}/attractions?audience=family
 ```json
 {
   "apiVersion": "v1",
-  "audience": "family",
+  "audience": "family_traveler",
   "mapLevel": "city",
   "count": 4,
   "flash": "Kraków · 4 attractions prioritised",
@@ -761,7 +765,7 @@ Camera: center on the city; bounds pad city + returned attractions (~0.04°).
 Products for one attraction (max 3 after dedupe).
 
 ```http
-GET /api/v1/homepage-map/cities/{cityId}/attractions/{attractionId}?audience=family
+GET /api/v1/homepage-map/cities/{cityId}/attractions/{attractionId}?audience=family_traveler
 ```
 
 **When:** optional after bootstrap. Other clients, debug, or a later live-price fetch at L3 (Approach G). The v1 homepage does **not** call this on `goPoi`.
@@ -771,7 +775,7 @@ GET /api/v1/homepage-map/cities/{cityId}/attractions/{attractionId}?audience=fam
 ```json
 {
   "apiVersion": "v1",
-  "audience": "family",
+  "audience": "family_traveler",
   "mapLevel": "poi",
   "flash": "Wawel Castle · 2 products from €14",
   "camera": {
@@ -860,7 +864,7 @@ Pins on the map should still show the city’s ranked attractions, with `selecte
 Decision record: [HOMEPAGE_MAP_DATA_LOADING.md](./HOMEPAGE_MAP_DATA_LOADING.md) (Approach A).
 
 ```http
-GET /api/v1/homepage-map/bootstrap?audience=family
+GET /api/v1/homepage-map/bootstrap?audience=family_traveler
 ```
 
 **When:** `HomepageMap` mounts. `?audience=` only ranks the **first-paint** matchline / pin order. The payload still includes `fits` for the other audiences so a chip tap stays local.
@@ -872,14 +876,16 @@ If bootstrap is not implemented, the fallback is a static homepage-slice JSON (s
 ```json
 {
   "apiVersion": "v1",
-  "audience": "family",
+  "audience": "family_traveler",
   "mapLevel": "world",
   "audiences": [
-    { "id": "first", "label": "First visit", "matchCount": 2 },
-    { "id": "family", "label": "Family", "matchCount": 2 },
-    { "id": "culture", "label": "Culture & history", "matchCount": 3 },
-    { "id": "active", "label": "Active", "matchCount": 1 },
-    { "id": "budget", "label": "Budget-smart", "matchCount": 3 }
+    { "id": "first_time_visitor", "label": "First Visit, Made Memorable", "matchCount": 2 },
+    { "id": "family_traveler", "label": "Family Favourites", "matchCount": 2 },
+    { "id": "couple_traveler", "label": "Perfect for Two", "matchCount": 3 },
+    { "id": "comfort_easy_pace_traveler", "label": "Premium & Effortless", "matchCount": 5 },
+    { "id": "solo_social_traveler", "label": "Solo & Social", "matchCount": 4 },
+    { "id": "interest_deep_dive_traveler", "label": "Go Deeper", "matchCount": 4 },
+    { "id": "active_adventure_traveler", "label": "Active Discovery", "matchCount": 3 }
   ],
   "matchline": "1 best match and 1 best alternative for family. Everything else stays on the map, labelled honestly.",
   "count": 6,
@@ -896,7 +902,7 @@ If bootstrap is not implemented, the fallback is a static homepage-slice JSON (s
 - `audiences` is identical to §8.1.
 - `destinations` / `matchline` / `camera` are identical to §8.2 for the requested audience.
 - `cities` is a map of `cityId` → city catalog (same shape as §8.5 / §8.6), including attractions and products. Every destination’s cities must be present (caps: ≤8 cities, ≤4 attractions, ≤3 products).
-- Each destination and attraction includes **`fits` for all five audiences**, not only `?audience=`.
+- Each destination and attraction includes **`fits` for all seven audiences**, not only `?audience=`.
 - `fitsComplete: true` means the client may re-rank without another GET.
 
 Granular endpoints (§8.2–§8.7) remain for other clients, debug, or a later live-price fetch at L3. They are **not** the homepage navigation path.
@@ -911,7 +917,7 @@ Assume `VITE_API_BASE_URL=http://localhost:8080`.
 
 | User action | Hook | Request |
 | --- | --- | --- |
-| Open homepage | mount | `GET /bootstrap?audience=family` **once** |
+| Open homepage | mount | `GET /bootstrap?audience=family_traveler` **once** |
 | Switch audience | `setAud` | **None.** Re-rank from cached `fits`. If current country `tier > 2`, return to world (still no fetch). |
 | Click country | `goCountry` | **None.** Cities from bootstrap cache, then fly camera. |
 | Click city | `goCity` | **None.** Attractions from cache, then fly camera. |
@@ -976,7 +982,7 @@ Loading: bootstrap may run behind the first-paint poster. After the slice is in 
 ### Request
 
 ```
-GET /api/v1/homepage-map/destinations?audience=family HTTP/1.1
+GET /api/v1/homepage-map/destinations?audience=family_traveler HTTP/1.1
 Host: localhost:8080
 Accept: application/json
 ```
@@ -1008,9 +1014,9 @@ Catalog is public and changes slowly. `max-age=60` is enough for v1. Vary on the
 Family user opens the map, opens Poland, opens Kraków, opens Wawel Castle. **One HTTP call.**
 
 ```
-1. GET /bootstrap?audience=family
+1. GET /bootstrap?audience=family_traveler
    → preference bar + 6 country pins + cities / attractions / products in memory
-   → Poland tier 0 for family; fits for the other four audiences included
+   → Poland tier 0 for Family Favourites; fits for the other six audiences included
 
 2. Tap Poland
    → cities from memory (Kraków, Warsaw, Gdańsk, Wrocław, Zakopane)
@@ -1029,17 +1035,17 @@ Family user opens the map, opens Poland, opens Kraków, opens Wawel Castle. **On
    → no GET
 ```
 
-User then taps **Budget-smart**:
+User then taps **Premium & Effortless**:
 
 ```
 5. Re-rank from cached fits
    → Poland still tier 0, stay in-country
    → matchline and chips change
-   → flash: “Re-ranked for budget-smart”
+   → flash: “Re-ranked for premium & effortless”
    → no GET
 ```
 
-User then taps **Active** while still on Poland:
+User then taps **Active Discovery** while still on Poland:
 
 ```
 6. Cached fits have Poland tier 3 for active

@@ -174,6 +174,22 @@ Make the booking decision between two or three versions of the same attraction, 
 
 A single horizontally scrolling row of **preference chips** sits above the map.
 
+### Seven Canonical Audience Profiles
+
+The homepage uses the same underlying profiles as sign-up and the preference editor. Landing-page labels are intentionally shorter and clearer:
+
+| Internal profile | Preference chip |
+|---|---|
+| `first_time_visitor` | First Visit, Made Memorable |
+| `family_traveler` | Family Favourites |
+| `couple_traveler` | Perfect for Two |
+| `comfort_easy_pace_traveler` | Premium & Effortless |
+| `solo_social_traveler` | Solo & Social |
+| `interest_deep_dive_traveler` | Go Deeper |
+| `active_adventure_traveler` | Active Discovery |
+
+These are audience profiles, not trip-intent or group-format filters. Budget, value, private, small-group, and standard-group signals support ranking but are not separate preference chips.
+
 ### Behaviour
 - **Tap a chip**: Re-ranks pins, re-tints map, rewrites every match label, reason chip, fit explanation, trade-off. Reorders the list below. Updates count line above map
 - **One selection at a time**: Selected chip = solid navy fill
@@ -219,7 +235,7 @@ Reason chips name **specific reasons, never moods** (e.g., "Strong family-compat
 - **↔ Pan**: Drag (**Never changes level, never opens anything**)
 
 ### Transition Feedback
-Each transition confirms itself with a brief line over the map (e.g. "Poland · 5 cities prioritised", "Re-ranked for culture & history"). States **what changed**, never "loading".
+Each transition confirms itself with a brief line over the map (e.g. "Poland · 5 cities prioritised", "Re-ranked for family favourites"). States **what changed**, never "loading".
 
 ---
 

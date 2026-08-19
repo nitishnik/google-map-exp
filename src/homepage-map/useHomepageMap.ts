@@ -106,7 +106,7 @@ function poiCamera(cityId: string, _poiName: string): CameraTarget {
 }
 
 export function useHomepageMap(): HomepageMapState {
-  const [aud, setAudState] = useState<AudienceId>('family')
+  const [aud, setAudState] = useState<AudienceId>('family_traveler')
   const [level, setLevel] = useState<MapLevel>('world')
   const [countryId, setCountryId] = useState<string | null>(null)
   const [cityId, setCityId] = useState<string | null>(null)

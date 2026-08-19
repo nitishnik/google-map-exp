@@ -1,4 +1,11 @@
-export type AudienceId = 'first' | 'family' | 'culture' | 'active' | 'budget'
+export type AudienceId =
+  | 'first_time_visitor'
+  | 'family_traveler'
+  | 'couple_traveler'
+  | 'comfort_easy_pace_traveler'
+  | 'solo_social_traveler'
+  | 'interest_deep_dive_traveler'
+  | 'active_adventure_traveler'
 
 export type MapLevel = 'world' | 'country' | 'city' | 'poi'
 
@@ -61,11 +68,16 @@ export interface Destination {
 }
 
 export const AUDIENCES: Audience[] = [
-  { id: 'first', label: 'First visit' },
-  { id: 'family', label: 'Family' },
-  { id: 'culture', label: 'Culture & history' },
-  { id: 'active', label: 'Active' },
-  { id: 'budget', label: 'Budget-smart' },
+  { id: 'first_time_visitor', label: 'First Visit, Made Memorable' },
+  { id: 'family_traveler', label: 'Family Favourites' },
+  { id: 'couple_traveler', label: 'Perfect for Two' },
+  {
+    id: 'comfort_easy_pace_traveler',
+    label: 'Premium & Effortless',
+  },
+  { id: 'solo_social_traveler', label: 'Solo & Social' },
+  { id: 'interest_deep_dive_traveler', label: 'Go Deeper' },
+  { id: 'active_adventure_traveler', label: 'Active Discovery' },
 ]
 
 export const TIERS = [
