@@ -3,8 +3,6 @@
 
 This prototype is the **recommendation funnel on Google Maps**. What follows is what that engine can and cannot do. Items that belong on the production site are not listed here.
 
-Related brief: [client-requirements.md](./client-requirements.md).
-
 ---
 
 ## What this prototype is
